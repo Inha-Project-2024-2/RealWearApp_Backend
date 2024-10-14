@@ -53,6 +53,30 @@ public class UserSession {
         });
     }
 
+    public void receiveVideoFromOtherUser(UserSession sender, String sdpOffer) throws IOException {
+        log.info("참가자 {}:{} 방에 있는 참가자 {} 와 연결 중", this.name, this.roomName, sender.getName());
+
+        log.trace("참가자 {}: 참가자 {}에 대한 SdpOffer {}", this.name, sender.getName(), sdpOffer);
+
+        final String ipSdpAnswer = this.getEndpointForOtherUser(sender).processOffer(sdpOffer);
+        final JsonObject scParams = new JsonObject();
+        scParams.addProperty("id", "receiveVideoAnswer");
+        scParams.addProperty("name", sender.getName());
+        scParams.addProperty("sdpAnswer", ipSdpAnswer);
+
+        log.trace("참가자 {}: 참가자 {}에 대한 SdpAnswer {}", this.name, sender.getName(), ipSdpAnswer);
+        this.sendMessage(scParams);
+        log.debug("후보 모으는 중");
+        this.getEndpointForOtherUser(sender).gatherCandidates();
+    }
+
+    private void sendMessage(JsonObject message) throws IOException {
+        log.debug("참가자 {}: 메시지 전송 {}", name, message);
+        synchronized (session) {
+            session.sendMessage(new TextMessage(message.toString()));
+        }
+    }
+
     private WebRtcEndpoint getEndpointForOtherUser(final UserSession sender){
         if(sender.getName().equals(name)){
             log.debug("참가자 {} : loopback", this.name); // 자기 자신의 화면을 보기 위한 설정 및 추후 필터 적용을 위한 도구
