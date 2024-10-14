@@ -35,6 +35,10 @@ public class Room implements Closeable {
         log.info("방 {} 생성", roomName);
     }
 
+    public Collection<UserSession> getParticipants() {
+        return participants.values();
+    }
+
     @PreDestroy
     private void shutdown() {
         this.close();
@@ -89,9 +93,39 @@ public class Room implements Closeable {
         user.sendMessage(existingParticipantsMsg);
     }
 
-    public Collection<UserSession> getParticipants() {
-        return participants.values();
+    public void leave(UserSession user) throws IOException {
+        log.debug("참가자 {}: 방 {}을 떠남", user.getName(), this.roomName);
+        this.removeParticipant(user.getName());
+        user.close();
     }
+
+    private void removeParticipant(String name) throws IOException {
+        participants.remove(name);
+
+        log.debug("방 {}: 모든 유저에게 참가자 {}가 방을 떠난다고 알림", this.roomName, name);
+
+        final List<String> unNotifiedParticipants = new ArrayList<>();
+        final JsonObject participantLeftJson = new JsonObject();
+        participantLeftJson.addProperty("id", "participantLeft");
+        participantLeftJson.addProperty("name", name);
+        for (final UserSession participant : participants.values()) {
+            try {
+                participant.cancelVideoFrom(name);
+                participant.sendMessage(participantLeftJson);
+            } catch (final IOException e) {
+                unNotifiedParticipants.add(participant.getName());
+            }
+        }
+
+        if (!unNotifiedParticipants.isEmpty()) {
+            log.debug("방 {}: 참가자들이 {} 참가자 {}가 방을 떠났다는 알림을 받지 못함", this.roomName,
+                    unNotifiedParticipants, name);
+        }
+
+    }
+
+
+
 
     @Override
     public void close() {
