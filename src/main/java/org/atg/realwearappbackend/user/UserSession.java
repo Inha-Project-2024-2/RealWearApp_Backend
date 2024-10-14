@@ -178,4 +178,26 @@ public class UserSession implements Closeable {
             }
         }
     }
+
+    @Override
+    public boolean equals(Object obj) {
+
+        if (this == obj) {
+            return true;
+        }
+        if (!(obj instanceof UserSession other)) {
+            return false;
+        }
+        boolean eq = name.equals(other.name);
+        eq &= roomName.equals(other.roomName);
+        return eq;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = 1;
+        result = 31 * result + name.hashCode();
+        result = 31 * result + roomName.hashCode();
+        return result;
+    }
 }
