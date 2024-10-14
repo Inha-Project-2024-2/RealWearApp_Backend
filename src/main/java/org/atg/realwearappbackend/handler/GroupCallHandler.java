@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import lombok.extern.slf4j.Slf4j;
 import org.atg.realwearappbackend.registry.UserRegistry;
+import org.atg.realwearappbackend.room.Room;
 import org.atg.realwearappbackend.room.RoomManager;
 import org.atg.realwearappbackend.user.UserSession;
 import org.kurento.client.IceCandidate;
@@ -12,6 +13,7 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+import java.io.IOException;
 import java.util.logging.Logger;
 
 @Slf4j
@@ -71,11 +73,21 @@ public class GroupCallHandler extends TextWebSocketHandler {
         }
     }
 
-    private void joinRoom(JsonObject jsonMessage, WebSocketSession session) {
-        
+    private void joinRoom(JsonObject params, WebSocketSession session) throws IOException {
+        final String roomName = params.get("room").getAsString();
+        final String name = params.get("name").getAsString();
+        log.info("참가자 {} : {} 방에 입장 시도", name, roomName);
+
+        Room room = roomManager.getRoom(roomName);
+        final UserSession user = room.join(name, session);
+        registry.register(user);
     }
 
-    private void leaveRoom(UserSession user) {
-
+    private void leaveRoom(UserSession user) throws IOException {
+        final Room room = roomManager.getRoom(user.getRoomName());
+        room.leave(user);
+        if(room.getParticipants().isEmpty()){
+            roomManager.removeRoom(room);
+        }
     }
 }
