@@ -68,7 +68,7 @@ public class UserSession implements Closeable {
         this.getEndpointForOtherUser(sender).gatherCandidates();
     }
 
-    private void sendMessage(JsonObject message) throws IOException {
+    public void sendMessage(JsonObject message) throws IOException {
         log.debug("참가자 {}: 메시지 전송 {}", name, message);
         synchronized (session) {
             session.sendMessage(new TextMessage(message.toString()));
