@@ -41,11 +41,27 @@ public class Room implements Closeable {
         return participant;
     }
 
-    private void joinRoom(UserSession participant) {
+    private Collection<String> joinRoom(UserSession newParticipant) {
+        final JsonObject newParticipantMsg = new JsonObject();
+        newParticipantMsg.addProperty("id", "newParticipantArrived");
+        newParticipantMsg.addProperty("name", newParticipant.getName());
 
+        final List<String> participantsList = new ArrayList<>(participants.values().size());
+
+        log.debug("방 {}: 다른 참가자들에게 새로운 참가자 {}를 알림", this.roomName, newParticipant.getName());
+
+        for(final UserSession participant : participants.values()) {
+
+            try {
+                participant.sendMessage(newParticipantMsg);
+            } catch (IOException e) {
+                log.debug("방 {} : 참가자 {}가 방에 접속한 것을 알리지 못함", this.roomName, participant.getName(), e);
+            }
+            participantsList.add(participant.getName());
+        }
+
+        return participantsList;
     }
-
-    private void sendParticipantNames(UserSession participant) {
     }
 
     @Override
