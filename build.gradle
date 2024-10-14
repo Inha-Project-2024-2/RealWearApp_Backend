@@ -23,22 +23,22 @@ ext {
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework:spring-websocket'
-
     implementation 'org.webjars:webjars-locator:0.52'
     implementation 'org.webjars.bower:jquery:3.5.1'
     implementation 'org.webjars.bower:bootstrap:4.6.0'
     implementation 'org.webjars.bower:demo-console:1.5.1'
     implementation 'org.webjars.bower:ekko-lightbox:5.2.0'
-
-// https://mvnrepository.com/artifact/org.webjars.bower/webrtc-adapter
     implementation 'org.webjars.bower:webrtc-adapter:7.4.0'
-
-
-// https://mvnrepository.com/artifact/org.kurento/kurento-client
     implementation 'org.kurento:kurento-client:7.1.0'
+    implementation 'org.kurento:kurento-utils-js:7.1.0'
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+
+
 
 // https://mvnrepository.com/artifact/org.kurento/kurento-utils-js
-    implementation 'org.kurento:kurento-utils-js:7.1.0'
+
 
 }
 
