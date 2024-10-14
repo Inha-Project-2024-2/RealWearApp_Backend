@@ -32,7 +32,7 @@ public class KurentoConfiguration implements WebSocketConfigurer {
 
     @Bean
     public RoomManager roomManager(){
-        return new RoomManager();
+        return new RoomManager(kurentoClient());
     }
 
     @Bean
