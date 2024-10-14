@@ -1,14 +1,23 @@
 package org.atg.realwearappbackend.room;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.atg.realwearappbackend.user.UserSession;
+import org.kurento.client.Continuation;
 import org.kurento.client.MediaPipeline;
+import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 import javax.annotation.PreDestroy;
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -31,7 +40,7 @@ public class Room implements Closeable {
         this.close();
     }
 
-    public UserSession join(String username, WebSocketSession session) {
+    public UserSession join(String username, WebSocketSession session) throws IOException {
         log.info("방 {} : 참가자 {} 추가", this.roomName, username);
         final UserSession participant = new UserSession(username, roomName, this.pipeline, session);
 
@@ -62,6 +71,26 @@ public class Room implements Closeable {
 
         return participantsList;
     }
+
+    private void sendParticipantNames(UserSession user) throws IOException {
+        final JsonArray participantsArray = new JsonArray();
+        for (final UserSession participant : this.getParticipants()) {
+            if (!participant.equals(user)) {
+                final JsonElement participantName = new JsonPrimitive(participant.getName());
+                participantsArray.add(participantName);
+            }
+        }
+
+        final JsonObject existingParticipantsMsg = new JsonObject();
+        existingParticipantsMsg.addProperty("id", "existingParticipants");
+        existingParticipantsMsg.add("data", participantsArray);
+        log.debug("참가자 {}: 참가자 리스트(크기:{})를 전달 받음", user.getName(),
+                participantsArray.size());
+        user.sendMessage(existingParticipantsMsg);
+    }
+
+    public Collection<UserSession> getParticipants() {
+        return participants.values();
     }
 
     @Override
