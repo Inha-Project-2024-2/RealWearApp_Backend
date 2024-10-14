@@ -1,6 +1,7 @@
 package org.atg.realwearappbackend.user;
 
 import com.google.gson.JsonObject;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.kurento.client.EventListener;
 import org.kurento.client.IceCandidateFoundEvent;
@@ -15,15 +16,20 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 public class UserSession {
+    @Getter
     private final String name;
+    @Getter
     private final WebSocketSession session;
+
 
     private final MediaPipeline pipeline;
 
+    @Getter
     private final String roomName;
 
+    @Getter
     private final WebRtcEndpoint outboundEndpoint;
-    private final ConcurrentHashMap<String, UserSession> inboundEndPoint = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, WebRtcEndpoint> inboundEndPoint = new ConcurrentHashMap<>();
 
     public UserSession(String name, WebSocketSession session, MediaPipeline pipeline, String roomName, WebRtcEndpoint outboundEndpoint) {
         this.name = name;
