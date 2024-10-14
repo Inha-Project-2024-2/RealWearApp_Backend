@@ -167,4 +167,15 @@ public class UserSession implements Closeable {
             }
         });
     }
+
+    public void addCandidate(IceCandidate candidate, String name) {
+        if (this.name.equals(name)) {
+            outboundEndpoint.addIceCandidate(candidate);
+        } else {
+            WebRtcEndpoint webRtc = inboundEndPoint.get(name);
+            if (webRtc != null) {
+                webRtc.addIceCandidate(candidate);
+            }
+        }
+    }
 }
