@@ -22,7 +22,7 @@ public class KurentoConfiguration implements WebSocketConfigurer {
 
     @Bean
     public GroupCallHandler groupCallHandler(){
-        return new GroupCallHandler();
+        return new GroupCallHandler(roomManager(), registry());
     }
 
     @Bean
