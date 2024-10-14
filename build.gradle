@@ -1,0 +1,55 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.3.4'
+    id 'io.spring.dependency-management' version '1.1.6'
+}
+
+group = 'org.atg'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+ext {
+    set('server.port', "8443")
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework:spring-websocket'
+
+    implementation 'org.webjars:webjars-locator:0.52'
+    implementation 'org.webjars.bower:jquery:3.5.1'
+    implementation 'org.webjars.bower:bootstrap:4.6.0'
+    implementation 'org.webjars.bower:demo-console:1.5.1'
+    implementation 'org.webjars.bower:ekko-lightbox:5.2.0'
+
+// https://mvnrepository.com/artifact/org.webjars.bower/webrtc-adapter
+    implementation 'org.webjars.bower:webrtc-adapter:7.4.0'
+
+
+// https://mvnrepository.com/artifact/org.kurento/kurento-client
+    implementation 'org.kurento:kurento-client:7.1.0'
+
+// https://mvnrepository.com/artifact/org.kurento/kurento-utils-js
+    implementation 'org.kurento:kurento-utils-js:7.1.0'
+
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+bootRun {
+    jvmArgs = ["-Dkms.url=ws://{KMS_HOST}:8888/kurento"]
+}
+
+
+// clean 태스크가 항상 실행되도록 설정
+tasks.bootRun.dependsOn clean
