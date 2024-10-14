@@ -3,10 +3,7 @@ package org.atg.realwearappbackend.user;
 import com.google.gson.JsonObject;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.kurento.client.EventListener;
-import org.kurento.client.IceCandidateFoundEvent;
-import org.kurento.client.MediaPipeline;
-import org.kurento.client.WebRtcEndpoint;
+import org.kurento.client.*;
 import org.kurento.jsonrpc.JsonUtils;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -109,5 +106,25 @@ public class UserSession {
 
         sender.getOutboundEndpoint().connect(inbound);
         return inbound;
+    }
+
+    public void cancelVideoFrom(final String senderName) {
+        log.debug("참가자 {}: 참가자 {}의 비디오 수신 취소", this.name, senderName);
+        final WebRtcEndpoint incoming = inboundEndPoint.remove(senderName);
+
+        log.debug("참가자 {}: 참가자 {}의 비디오 엔드포인트 삭제", this.name, senderName);
+        incoming.release(new Continuation<Void>() {
+            @Override
+            public void onSuccess(Void result) throws Exception {
+                log.trace("참가자 {}: 성공적으로 참가자 {}의 엔드포인트 삭제",
+                        UserSession.this.name, senderName);
+            }
+
+            @Override
+            public void onError(Throwable cause) throws Exception {
+                log.warn("참가자 {}:  참가자 {}의 엔드포인트 삭제 실패", UserSession.this.name,
+                        senderName);
+            }
+        });
     }
 }
