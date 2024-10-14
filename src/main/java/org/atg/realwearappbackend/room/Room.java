@@ -95,6 +95,30 @@ public class Room implements Closeable {
 
     @Override
     public void close() {
+        for (final UserSession user : participants.values()) {
+            try {
+                user.close();
+            } catch (IOException e) {
+                log.debug("방 {}: 참가자 {}의 닫기를 실행 하지 못함 ", this.roomName, user.getName(), e);
+            }
+        }
+
+        participants.clear();
+
+        pipeline.release(new Continuation<Void>() {
+
+            @Override
+            public void onSuccess(Void result) throws Exception {
+                log.trace("방 {}: 파이프라인 해제", Room.this.roomName);
+            }
+
+            @Override
+            public void onError(Throwable cause) throws Exception {
+                log.warn("참가자 {}: 파이프라인을 해제하지 못함", Room.this.roomName);
+            }
+        });
+
+        log.debug("방 {}이 닫아짐", this.roomName);
 
     }
 }
