@@ -52,7 +52,8 @@ public class UserSession {
             }
         });
     }
-    private WebRtcEndpoint getEndpointForUser(final UserSession sender){
+
+    private WebRtcEndpoint getEndpointForOtherUser(final UserSession sender){
         if(sender.getName().equals(name)){
             log.debug("참가자 {} : loopback", this.name); // 자기 자신의 화면을 보기 위한 설정 및 추후 필터 적용을 위한 도구
             return outboundEndpoint;
