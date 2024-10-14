@@ -8,11 +8,12 @@ import org.kurento.jsonrpc.JsonUtils;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
-public class UserSession {
+public class UserSession implements Closeable {
     @Getter
     private final String name;
     @Getter
@@ -124,6 +125,45 @@ public class UserSession {
             public void onError(Throwable cause) throws Exception {
                 log.warn("참가자 {}:  참가자 {}의 엔드포인트 삭제 실패", UserSession.this.name,
                         senderName);
+            }
+        });
+    }
+
+    @Override
+    public void close() throws IOException {
+        log.debug("참가자 {}: 리소스 해제", this.name);
+        for (final String remoteParticipantName : inboundEndPoint.keySet()) {
+
+            log.trace("참가자 {}: 참가자{}의 incoming 엔드 포인트 삭제 ", this.name, remoteParticipantName);
+
+            final WebRtcEndpoint ep = this.inboundEndPoint.get(remoteParticipantName);
+
+            ep.release(new Continuation<Void>() {
+
+                @Override
+                public void onSuccess(Void result) throws Exception {
+                    log.trace("참가자 {}: 성공적으로 참가자 {}의 엔드포인트 삭제",
+                            UserSession.this.name, remoteParticipantName);
+                }
+
+                @Override
+                public void onError(Throwable cause) throws Exception {
+                    log.warn("참가자 {}:  참가자 {}의 엔드포인트 삭제 실패", UserSession.this.name,
+                            remoteParticipantName);
+                }
+            });
+        }
+
+        outboundEndpoint.release(new Continuation<Void>() {
+
+            @Override
+            public void onSuccess(Void result) throws Exception {
+                log.trace("참가자 {}: outgoing 엔드 포인트 삭제", UserSession.this.name);
+            }
+
+            @Override
+            public void onError(Throwable cause) throws Exception {
+                log.warn("참가자 {}: outgoing 엔드 포인트 삭제 실패", UserSession.this.name);
             }
         });
     }
