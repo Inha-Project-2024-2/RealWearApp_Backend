@@ -76,9 +76,12 @@ function Participant(name) {
         if (error) return console.error("sdp offer error")
         console.log('Invoking SDP offer callback function');
         var msg = {
-            id: "receiveVideoFrom",
-            sender: name,
-            sdpOffer: offerSdp
+            method : "receiveVideoFrom",
+            id: 101,
+            params : {
+                sender: name,
+                sdpOffer: offerSdp
+            }
         };
         sendMessage(msg);
     }
@@ -88,9 +91,12 @@ function Participant(name) {
         console.log("Local candidate" + JSON.stringify(candidate));
 
         var message = {
-            id: 'onIceCandidate',
-            candidate: candidate,
-            name: name
+            method: 'onIceCandidate',
+            id: 102,
+            params : {
+                candidate: candidate,
+                name: name
+            }
         };
         sendMessage(message);
     }
