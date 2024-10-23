@@ -9,7 +9,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.atg.realwearappbackend.user.UserSession;
 import org.kurento.client.Continuation;
 import org.kurento.client.MediaPipeline;
-import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 import javax.annotation.PreDestroy;
@@ -19,11 +18,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 @Slf4j
 public class Room implements Closeable {
-    private final ConcurrentHashMap<String, UserSession> participants = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, UserSession> webParticipants = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, UserSession> androidParticipants = new ConcurrentHashMap<>();
     private final MediaPipeline pipeline;
     @Getter
     private final String roomName;
@@ -35,8 +34,12 @@ public class Room implements Closeable {
         log.info("방 {} 생성", roomName);
     }
 
-    public Collection<UserSession> getParticipants() {
-        return participants.values();
+    public Collection<UserSession> getWebParticipants() {
+        return webParticipants.values();
+    }
+
+    public Collection<UserSession> getAndroidParticipants() {
+        return androidParticipants.values();
     }
 
     @PreDestroy
@@ -44,29 +47,46 @@ public class Room implements Closeable {
         this.close();
     }
 
-    public UserSession join(String username, WebSocketSession session) throws IOException {
+    public UserSession join(String username, WebSocketSession session, String device, Integer id) throws IOException {
         log.info("방 {} : 참가자 {} 추가", this.roomName, username);
-        final UserSession participant = new UserSession(username, roomName, this.pipeline, session);
+        final UserSession participant = new UserSession(username, roomName, this.pipeline, session, device, id);
 
         joinRoom(participant);
-        participants.put(username, participant);
-        sendParticipantNames(participant);
+
+        if(device.equals("web")) {
+            sendParticipantNames(participant);
+            webParticipants.put(username, participant);
+        }else{
+            androidParticipants.put(username, participant);
+            responseConnect(username, participant);
+        }
         return participant;
     }
 
-    private Collection<String> joinRoom(UserSession newParticipant) {
-        final JsonObject newParticipantMsg = new JsonObject();
-        newParticipantMsg.addProperty("id", "newParticipantArrived");
-        newParticipantMsg.addProperty("name", newParticipant.getName());
+    private void responseConnect(String username, UserSession participant) throws IOException {
+        final JsonObject selfParticipantMsg = new JsonObject();
+        selfParticipantMsg.addProperty("id", participant.getId());
+        selfParticipantMsg.addProperty("jsonrpc", "2.0");
 
-        final List<String> participantsList = new ArrayList<>(participants.values().size());
+        final JsonObject result = new JsonObject();
+        result.addProperty("success", true);
+        selfParticipantMsg.add("result", result);
+        participant.sendMessage(selfParticipantMsg);
+    }
+
+    private Collection<String> joinRoom(UserSession newParticipant) {
+        final JsonObject newWebParticipantMsg = new JsonObject();
+        newWebParticipantMsg.addProperty("id", "newParticipantArrived");
+        newWebParticipantMsg.addProperty("name", newParticipant.getName());
+
+        final List<String> participantsList = new ArrayList<>(webParticipants.values().size());
 
         log.debug("방 {}: 다른 참가자들에게 새로운 참가자 {}를 알림", this.roomName, newParticipant.getName());
 
-        for(final UserSession participant : participants.values()) {
+        for(final UserSession participant : webParticipants.values()) {
 
             try {
-                participant.sendMessage(newParticipantMsg);
+                participant.sendMessage(newWebParticipantMsg);
             } catch (IOException e) {
                 log.debug("방 {} : 참가자 {}가 방에 접속한 것을 알리지 못함", this.roomName, participant.getName(), e);
             }
@@ -78,13 +98,19 @@ public class Room implements Closeable {
 
     private void sendParticipantNames(UserSession user) throws IOException {
         final JsonArray participantsArray = new JsonArray();
-        for (final UserSession participant : this.getParticipants()) {
+        for (final UserSession participant : this.getWebParticipants()) {
             if (!participant.equals(user)) {
                 final JsonElement participantName = new JsonPrimitive(participant.getName());
                 participantsArray.add(participantName);
             }
         }
 
+        for (final UserSession participant : this.getAndroidParticipants()) {
+            if (!participant.equals(user)) {
+                final JsonElement participantName = new JsonPrimitive(participant.getName());
+                participantsArray.add(participantName);
+            }
+        }
         final JsonObject existingParticipantsMsg = new JsonObject();
         existingParticipantsMsg.addProperty("id", "existingParticipants");
         existingParticipantsMsg.add("data", participantsArray);
@@ -100,7 +126,7 @@ public class Room implements Closeable {
     }
 
     private void removeParticipant(String name) throws IOException {
-        participants.remove(name);
+        webParticipants.remove(name);
 
         log.debug("방 {}: 모든 유저에게 참가자 {}가 방을 떠난다고 알림", this.roomName, name);
 
@@ -108,7 +134,7 @@ public class Room implements Closeable {
         final JsonObject participantLeftJson = new JsonObject();
         participantLeftJson.addProperty("id", "participantLeft");
         participantLeftJson.addProperty("name", name);
-        for (final UserSession participant : participants.values()) {
+        for (final UserSession participant : webParticipants.values()) {
             try {
                 participant.cancelVideoFrom(name);
                 participant.sendMessage(participantLeftJson);
@@ -129,7 +155,7 @@ public class Room implements Closeable {
 
     @Override
     public void close() {
-        for (final UserSession user : participants.values()) {
+        for (final UserSession user : webParticipants.values()) {
             try {
                 user.close();
             } catch (IOException e) {
@@ -137,7 +163,7 @@ public class Room implements Closeable {
             }
         }
 
-        participants.clear();
+        webParticipants.clear();
 
         pipeline.release(new Continuation<Void>() {
 
