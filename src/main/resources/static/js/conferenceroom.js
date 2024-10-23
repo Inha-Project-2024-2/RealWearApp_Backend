@@ -62,9 +62,14 @@ function register() {
 	document.getElementById('room').style.display = 'block';
 
 	var message = {
-		id : 'joinRoom',
-		name : name,
-		room : room,
+		method : 'joinRoom',
+		id : 100,
+		params : {
+			dataChannel : true,
+			user : name,
+			room : room,
+			device : "web"
+		}
 	}
 	sendMessage(message);
 }
@@ -124,7 +129,11 @@ function onExistingParticipants(msg) {
 
 function leaveRoom() {
 	sendMessage({
-		id : 'leaveRoom'
+		method : 'leaveRoom',
+		id : '103',
+		params : {
+
+		}
 	});
 
 	for ( var key in participants) {

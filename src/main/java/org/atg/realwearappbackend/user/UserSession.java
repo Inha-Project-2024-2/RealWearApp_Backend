@@ -19,22 +19,30 @@ public class UserSession implements Closeable {
     @Getter
     private final WebSocketSession session;
 
-
     private final MediaPipeline pipeline;
 
     @Getter
     private final String roomName;
 
+    // 안드로이드 참가자를 위한 속성
+    @Getter
+    private final String deviceType;
+
+    @Getter
+    private final Integer id;
+
     @Getter
     private final WebRtcEndpoint outboundEndpoint;
     private final ConcurrentHashMap<String, WebRtcEndpoint> inboundEndPoint = new ConcurrentHashMap<>();
 
-    public UserSession(String name,String roomName, MediaPipeline pipeline, WebSocketSession session) {
+    public UserSession(String name, String roomName, MediaPipeline pipeline, WebSocketSession session, String deviceType, Integer id) {
         this.name = name;
         this.session = session;
         this.pipeline = pipeline;
         this.roomName = roomName;
         this.outboundEndpoint = new WebRtcEndpoint.Builder(pipeline).build();
+        this.deviceType = deviceType;
+        this.id = id;
 
         this.outboundEndpoint.addIceCandidateFoundListener(event -> {
             JsonObject response = new JsonObject();
