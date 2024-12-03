@@ -4,9 +4,9 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import lombok.extern.slf4j.Slf4j;
+import org.atg.realwearappbackend.configuration.KurentoConfiguration;
 import org.atg.realwearappbackend.registry.UserRegistry;
 import org.atg.realwearappbackend.room.Room;
-import org.atg.realwearappbackend.room.RoomManager;
 import org.atg.realwearappbackend.user.UserSession;
 import org.kurento.client.IceCandidate;
 import org.springframework.web.socket.TextMessage;
@@ -19,12 +19,12 @@ import java.io.IOException;
 public class GroupCallHandler extends TextWebSocketHandler {
     private static final Gson gson = new GsonBuilder().create();
 
-    private final RoomManager roomManager;
+    private final KurentoConfiguration.RoomManager roomManager;
 
     private final UserRegistry registry;
 
 
-    public GroupCallHandler(RoomManager roomManager, UserRegistry registry) {
+    public GroupCallHandler(KurentoConfiguration.RoomManager roomManager, UserRegistry registry) {
         this.roomManager = roomManager;
         this.registry = registry;
     }
