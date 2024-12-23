@@ -1,39 +1,553 @@
-<html>
-<head>
-<meta charset="utf-8">
-<link rel="styleSheet" href="style.css" type="text/css" media="screen">
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>RearWear</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="description" content="HTML5 website template" />
+    <meta name="keywords" content="global, template, html, sass, jquery" />
+    <meta name="author" content="Bucky Maler" />
 
-<script src="/webjars/webrtc-adapter/release/adapter.js"></script>
-<script src="./js/conferenceroom.js"></script>
-<script src="./js/participant.js"></script>
-<script src="./js/kurento-utils.js"></script>
-</head>
-<body>
-	<div id="container">
-		<div id="wrapper">
-			<div id="join" class="animate join">
-				<h1>Join a Room</h1>
-				<form onsubmit="register(); return false;" accept-charset="UTF-8">
-					<p>
-						<input type="text" name="name" value="" id="name"
-							placeholder="Username" required>
-					</p>
-					<p>
-						<input type="text" name="room" value="" id="roomName"
-							placeholder="Room" required>
-					</p>
-					<p class="submit">
-						<input type="submit" name="commit" value="Join!">
-					</p>
-				</form>
-			</div>
-			<div id="room" style="display: none;">
-				<h2 id="room-header"></h2>
-				<div id="participants"></div>
-				<input type="button" id="button-leave" onmouseup="leaveRoom();"
-					value="Leave room">
-			</div>
-		</div>
-	</div>
-</body>
+
+    <link rel="stylesheet" href="assets/css/main.css" />
+
+    <script src="/webjars/webrtc-adapter/release/adapter.js"></script>
+    <script src="./assets/js/conferenceroom.js"></script>
+    <script src="./assets/js/participant.js"></script>
+    <script src="./js/kurento-utils.js"></script>
+    <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+    <style>
+      /* Room Name Header Styling */
+      #room-header {
+        text-align: center;
+        color: white;
+        font-size: 2.5rem;
+        font-weight: 600;
+        margin: 20px 0;
+        padding: 15px;
+        text-transform: uppercase;
+        letter-spacing: 3px;
+        background: rgba(135, 206, 235, 1);
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+        max-width: 800px;
+        margin-left: auto;
+        margin-right: auto;
+        backdrop-filter: blur(5px);
+      }
+
+      #room-header:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 8px rgba(0, 0, 0, 0.2);
+      }
+
+      .fade-transition {
+        opacity: 1;
+        transform: scale(1);
+        transition: opacity 0.8s ease-in-out, transform 0.8s ease-in-out;
+      }
+
+      .fade-out {
+        opacity: 0;
+        transform: scale(0.95);
+      }
+
+      .fade-in {
+        animation: fadeIn 0.8s ease-in-out forwards;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: scale(1.05);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      /* 배경색 전환 애니메이션 수정 */
+      @keyframes backgroundTransition {
+        0% {
+          background-color: black;
+          transform: scale(1);
+        }
+        100% {
+          background-color: #0ca3d2;
+          transform: scale(1.02);
+        }
+      }
+
+      /* Room 나가기 애니메이션 */
+      @keyframes leaveRoom {
+        0% {
+          transform: scale(1);
+          opacity: 1;
+        }
+        100% {
+          transform: scale(0.95);
+          opacity: 0;
+        }
+      }
+
+      #room {
+        transition: all 0.8s ease-in-out;
+      }
+
+      #button-leave {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 12px 24px;
+        background-color: #ff4444;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        font-size: 16px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        z-index: 1000;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+
+      #button-leave:hover {
+        background-color: #ff0000;
+      }
+
+      #button-leave:active {
+        transform: translateY(1px);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+      }
+
+      @keyframes backgroundTransition {
+        0% {
+          background-color: black;
+        }
+        100% {
+          background-color: #0ca3d2;
+        }
+      }
+
+      .animate-bg {
+        animation: backgroundTransition 2s forwards;
+      }
+
+      #room {
+        height: 100vh;  /* 확대된 요소를 감당할 수 있는 충분한 높이 */
+        /*padding: 100px;     !* 여유 공간 *!*/
+        box-sizing: border-box;
+      }
+      .participant {
+        position: relative;
+        border-radius: 10px;
+        margin: 5px;
+        width: 200px;
+        height: 150px;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        background: #000;
+      }
+
+      .participant video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .participant.enlarged {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 80vw;
+        height: 80vh;
+        z-index: 1000;
+        background: #000;
+      }
+
+      .participant.enlarged::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: -1;
+      }
+
+      .participant:hover:not(.enlarged) {
+        transform: scale(1.05);
+      }
+
+      .participant span {
+        position: absolute;
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: PapayaWhip;
+        background: rgba(0,0,0,0.5);
+        padding: 2px 8px;
+        border-radius: 4px;
+        z-index: 2;
+      }
+
+      #participants {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px;
+        padding: 20px;
+      }
+
+      #participants.has-enlarged .participant:not(.enlarged) {
+        opacity: 0.5;
+        transform: scale(0.95);
+      }
+
+      @media screen and (max-width: 768px) {
+        #room-header {
+          font-size: 1.5rem;
+          margin-top: 20px;
+          padding: 10px;
+          letter-spacing: 2px;
+        }
+
+        #button-leave {
+          top: auto;
+          bottom: 20px;
+          right: 20px;
+          width: auto;
+          border-radius: 50px;
+          padding: 15px 30px;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+          font-size: 16px;
+        }
+
+        /* 참가자 영역 조정 */
+        #participants {
+          margin-top: 20px;
+          padding: 10px;
+          margin-bottom: 80px; /* Leave 버튼을 위한 하단 여백 */
+        }
+
+        .participant {
+          width: 100%;
+          max-width: none;
+          margin: 5px 0;
+          height: 200px;
+        }
+
+        /* 버튼 호버 효과 수정 */
+        #button-leave:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+        }
+      }
+
+      /* 매우 작은 화면을 위한 추가 조정 */
+      @media screen and (max-width: 480px) {
+        #room-header {
+          font-size: 1.2rem;
+          letter-spacing: 1px;
+        }
+
+        #button-leave {
+          padding: 12px 24px;
+          font-size: 14px;
+          right: 15px;
+          bottom: 15px;
+        }
+      }
+    </style>
+
+    <script>
+
+    </script>
+  </head>
+
+  <body>
+    <!-- notification for small viewports and landscape oriented smartphones -->
+
+    <div class="perspective effect-rotate-left">
+      <div class="container">
+        <div class="outer-nav--return"></div>
+        <div id="viewport" class="l-viewport">
+          <div class="l-wrapper">
+            <header class="header">
+              <a class="header--logo" href="#0">
+                <img src="assets/img/logo.png" alt="Global" />
+                <p>RealWear.</p>
+              </a>
+              <button class="header--cta cta">Meeting Starts</button>
+              <div class="header--nav-toggle">
+                <span></span>
+              </div>
+            </header>
+            <nav class="l-side-nav">
+              <ul class="side-nav">
+                <li class="is-active"><span>Home</span></li>
+                <li><span>Works</span></li>
+                <li><span>About</span></li>
+                <li><span>Contact</span></li>
+                <li><span>Meeting Start</span></li>
+              </ul>
+            </nav>
+            <ul class="l-main-content main-content">
+              <li class="l-section section section--is-active">
+                <div class="intro">
+                  <div class="intro--banner">
+                    <h1>Everyone<br>Can be<br>An Expert</h1>
+                    <button class="cta">Meeting Starts
+                      <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 150 118" style="enable-background:new 0 0 150 118;" xml:space="preserve">
+                  <g transform="translate(0.000000,118.000000) scale(0.100000,-0.100000)">
+                    <path d="M870,1167c-34-17-55-57-46-90c3-15,81-100,194-211l187-185l-565-1c-431,0-571-3-590-13c-55-28-64-94-18-137c21-20,33-20,597-20h575l-192-193C800,103,794,94,849,39c20-20,39-29,61-29c28,0,63,30,298,262c147,144,272,271,279,282c30,51,23,60-219,304C947,1180,926,1196,870,1167z"/>
+                  </g>
+                  </svg>
+                      <span class="btn-background"></span>
+                    </button>
+                    <img src="assets/img/introduction-visual.png" alt="Welcome">
+                  </div>
+                  <div class="intro--options">
+                    <a href="#0">
+                      <h3>Smart Glass</h3>
+                      <p>Smart glasses using AI voice technology specifically designed to improve productivity, safety and efficiency of office workers in various industries</p>
+                    </a>
+                    <a href="#0">
+                      <h3>Wearable Technology</h3>
+                      <p>
+                        Transforming workflows by seamlessly integrating innovative wearable technologies and AI to deliver unprecedented hands-free experiences</p>
+                    </a>
+                    <a href="#0">
+                      <h3>Meetings with WebRTC</h3>
+                      <p>Many-to-many web & Android app communication using highly compatible WebRTC technology</p>
+                    </a>
+                  </div>
+                </div>
+              </li>
+              <li class="l-section section">
+                <div class="work">
+                  <h2>Works</h2>
+                  <div class="work--lockup">
+                    <ul class="slider">
+                      <li class="slider--item slider--item-left">
+                        <a href="#0">
+                          <div class="slider--item-image">
+                            <img
+                                    src="assets/img/facility-work.png"
+                                    alt="Victory"
+                            />
+                          </div>
+                          <p class="slider--item-title">Facility inspection</p>
+                          <p class="slider--item-description">
+                            Experts and field workers can share views in real time.
+                          </p>
+                        </a>
+                      </li>
+                      <li class="slider--item slider--item-center">
+                        <a href="#0">
+                          <div class="slider--item-image">
+                            <img
+                                    src="assets/img/conference.png"
+                                    alt="Metiew and Smith"
+                            />
+                          </div>
+                          <p class="slider--item-title">Group conference</p>
+                          <p class="slider--item-description">
+                            Supports many-to-many video conferencing for real-time communication and collaboration.
+                          </p>
+                        </a>
+                      </li>
+                      <li class="slider--item slider--item-right">
+                        <a href="#0">
+                          <div class="slider--item-image">
+                            <img
+                                    src="assets/img/realwear.png"
+                                    alt="Alex Nowak"
+                            />
+                          </div>
+                          <p class="slider--item-title">Real-time Feedback</p>
+                          <p class="slider--item-description">
+                            We carry out facility work by sharing perspectives with experts.
+                          </p>
+                        </a>
+                      </li>
+                    </ul>
+                    <div class="slider--prev">
+                      <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+                           viewBox="0 0 150 118" style="enable-background:new 0 0 150 118;" xml:space="preserve">
+                  <g transform="translate(0.000000,118.000000) scale(0.100000,-0.100000)">
+                    <path d="M561,1169C525,1155,10,640,3,612c-3-13,1-36,8-52c8-15,134-145,281-289C527,41,562,10,590,10c22,0,41,9,61,29
+                    c55,55,49,64-163,278L296,510h575c564,0,576,0,597,20c46,43,37,109-18,137c-19,10-159,13-590,13l-565,1l182,180
+                    c101,99,187,188,193,199c16,30,12,57-12,84C631,1174,595,1183,561,1169z"/>
+                  </g>
+                  </svg>
+                    </div>
+                    <div class="slider--next">
+                      <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 150 118" style="enable-background:new 0 0 150 118;" xml:space="preserve">
+                  <g transform="translate(0.000000,118.000000) scale(0.100000,-0.100000)">
+                    <path d="M870,1167c-34-17-55-57-46-90c3-15,81-100,194-211l187-185l-565-1c-431,0-571-3-590-13c-55-28-64-94-18-137c21-20,33-20,597-20h575l-192-193C800,103,794,94,849,39c20-20,39-29,61-29c28,0,63,30,298,262c147,144,272,271,279,282c30,51,23,60-219,304C947,1180,926,1196,870,1167z"/>
+                  </g>
+                  </svg>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="l-section section">
+                <div class="about">
+                  <div class="about--banner">
+                    <h2>Meet<br>Experts<br>around the<br>World</h2>
+                    <a href="#0">Download
+                      <span>
+                    <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 150 118" style="enable-background:new 0 0 150 118;" xml:space="preserve">
+                    <g transform="translate(0.000000,118.000000) scale(0.100000,-0.100000)">
+                      <path d="M870,1167c-34-17-55-57-46-90c3-15,81-100,194-211l187-185l-565-1c-431,0-571-3-590-13c-55-28-64-94-18-137c21-20,33-20,597-20h575l-192-193C800,103,794,94,849,39c20-20,39-29,61-29c28,0,63,30,298,262c147,144,272,271,279,282c30,51,23,60-219,304C947,1180,926,1196,870,1167z"/>
+                    </g>
+                    </svg>
+                  </span>
+                    </a>
+                    <video src="assets/img/RealWearAppintro.mp4" width="500px" height="300" autoplay loop muted style="position: absolute; bottom: 100px; right: -100px;"></video>
+                  </div>
+                </div>
+              </li>
+              <li class="l-section section">
+                <div class="contact">
+                  <div class="contact--lockup">
+                    <div class="modal">
+                      <div class="modal--information">
+                        <p>Inha Univ, HighTech, South Korea</p>
+                        <a href="mailto:ouremail@gmail.com">12191632Y@inha.edu</a>
+                        <a href="tel:+148126287560">+48 010 3423 4323</a>
+                      </div>
+                      <ul class="modal--options">
+                        <li><a href="mailto:ouremail@gmail.com">Contact Us</a></li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="l-section section">
+                <div class="hire">
+                  <h2>Start RealWear Meeting</h2>
+                  <!-- checkout formspree.io for easy form setup -->
+                  <form
+                    class="work-request"
+                    onsubmit="register(); return false;"
+                    accept-charset="UTF-8"
+                  >
+                    <div class="work-request--information">
+                      <div class="information-name">
+                        <input id="name" type="text" spellcheck="false" />
+                        <label for="name">Name</label>
+                      </div>
+                      <div class="information-email">
+                        <input id="roomName" type="text" spellcheck="false" />
+                        <label for="roomName">Room Name</label>
+                      </div>
+                    </div>
+                    <input type="submit" value="Send Request" />
+                  </form>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div id="room" style="display: none">
+          <h2 id="room-header"></h2>
+          <div id="participants"></div>
+          <input type="button" id="button-leave" onmouseup="leaveRoom();" value="Leave room" />
+        </div>
+      </div>
+      <ul class="outer-nav">
+        <li class="is-active">Home</li>
+        <li>Works</li>
+        <li>About</li>
+        <li>Contact</li>
+        <li>Meeting Starts</li>
+      </ul>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
+    <script>
+      window.jQuery ||
+        document.write(
+          '<script src="assets/js/vendor/jquery-2.2.4.min.js"><\/script>'
+        );
+    </script>
+    <script src="assets/js/functions-min.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        const participantsContainer = document.getElementById('participants');
+
+        // Event delegation for participant clicks
+        participantsContainer.addEventListener('click', function(e) {
+          const participant = e.target.closest('.participant');
+          if (!participant) return;
+
+          // Toggle enlarged state
+          const isEnlarged = participant.classList.contains('enlarged');
+
+          // Remove enlarged class from any other participants
+          document.querySelectorAll('.participant.enlarged').forEach(p => {
+            if (p !== participant) {
+              p.classList.remove('enlarged');
+            }
+          });
+
+          // Toggle classes
+          participant.classList.toggle('enlarged');
+          participantsContainer.classList.toggle('has-enlarged', !isEnlarged);
+
+          // Prevent event bubbling
+          e.stopPropagation();
+        });
+
+        // Click outside to close enlarged view
+        document.addEventListener('click', function(e) {
+          if (!e.target.closest('.participant')) {
+            document.querySelectorAll('.participant.enlarged').forEach(p => {
+              p.classList.remove('enlarged');
+            });
+            participantsContainer.classList.remove('has-enlarged');
+          }
+        });
+
+        // Handle escape key
+        document.addEventListener('keydown', function(e) {
+          if (e.key === 'Escape') {
+            document.querySelectorAll('.participant.enlarged').forEach(p => {
+              p.classList.remove('enlarged');
+            });
+            participantsContainer.classList.remove('has-enlarged');
+          }
+        });
+      });
+
+      // Example function to add new participants (for testing)
+      function addParticipant(stream, userName) {
+        const participant = document.createElement('div');
+        participant.className = 'participant';
+
+        const video = document.createElement('video');
+        video.autoplay = true;
+        video.playsinline = true;
+        if (stream) {
+          video.srcObject = stream;
+        }
+
+        const name = document.createElement('span');
+        name.textContent = userName;
+
+        participant.appendChild(video);
+        participant.appendChild(name);
+
+        document.getElementById('participants').appendChild(participant);
+      }
+    </script>
+  </body>
 </html>
